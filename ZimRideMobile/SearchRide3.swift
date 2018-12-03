@@ -1,5 +1,5 @@
 //
-//  SearchRide2.swift
+//  SearchRide3.swift
 //  ZimRideMobile
 //
 //  Created by Nikita Lang on 11/24/18.
@@ -9,34 +9,21 @@
 import Foundation
 import UIKit
 
-enum RType:uint {
-    case round = 1, single = 2
-}
+class SearchRide3: UIViewController, UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
 
-class SearchRide2: UIViewController {
-    var navBar:UIView!
-    var viewWidth:Double!
-    var ridePanel:UIView!
-    var timePanel:UIView!
-    var nextPanel:UIView!
-    
-    var depatureTextField: UITextField!
-    var depatureTimeTextField: UITextField!
-    var returnDateTextField:UITextField!
-    var returnTimeTextField:UITextField!
-    
-    var rideType:RType!
-    
     var titleImage: UIImageView!
+    var navBar:UIView!
     
-    let roundTag = 1
-    let singleTag = 2
+    var collectionView : UICollectionView!
+    let Cell2ReuseIdentifier = "Cell2ReuseIdentifier"
+    let headerReuseIdentifier = "headerReuseIdentifier"
+    let padding: CGFloat = 8
+    let headerHeight: CGFloat = 30
+    var searchArray: [Search]!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         self.view.backgroundColor = UIColor.init(red: 0.16, green: 0.49, blue: 0.68, alpha: 1.0)
-        self.edgesForExtendedLayout = []
-        self.initview()
         
         // Do any additional setup after loading the view.
         titleImage = UIImageView()
@@ -45,27 +32,49 @@ class SearchRide2: UIViewController {
         titleImage.contentMode = .scaleToFill
         titleImage.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(titleImage)
+        
+        let note1 = Search(titleName: "Ithaca TO New York", message: "Departs Anytime", seats: "2", cost: "100", coverName: "Queen")
+        let note2 = Search(titleName: "Ithaca TO Kansas", message: "Departs 11-10-2018", seats: "4", cost: "0", coverName: "Queen")
+        let note3 = Search(titleName: "Ithaca TO Arizona", message: "Departs 12-02-2018", seats: "1", cost: "10", coverName: "Queen")
+        let note4 = Search(titleName: "Tucson TO New York", message: "Departs Anytime", seats: "3", cost: "100", coverName: "Queen")
+        let note5 = Search(titleName: "Ithaca TO Syracuse", message: "Departs Anytime", seats: "2", cost: "30", coverName: "Queen")
+        let note6 = Search(titleName: "Syracuse TO Ithaca", message: "Departs 01-29-2019", seats: "4", cost: "25", coverName: "Queen")
+        let note7 = Search(titleName: "Hong Kong TO Ithaca", message: "Departs Anytime", seats: "1", cost: "45", coverName: "Queen")
+        searchArray = [note1, note2, note3, note4, note5, note6, note7, note1]
+        
+        let layout = UICollectionViewFlowLayout()
+        // scrollDirection can be vertical or horizontal
+        layout.scrollDirection = .vertical
+        layout.minimumInteritemSpacing = padding
+        layout.minimumLineSpacing = padding
+        collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        collectionView.translatesAutoresizingMaskIntoConstraints = false
+        collectionView.backgroundColor = UIColor.init(displayP3Red: 40/255, green: 124/255, blue: 174/255, alpha: 1)
+        collectionView.dataSource = self
+        collectionView.delegate = self
+        collectionView.register(SearchViewCell.self, forCellWithReuseIdentifier: Cell2ReuseIdentifier)
+        view.addSubview(collectionView)
+        
         setupConstraints()
+        self.initNavBar()
     }
     
     func setupConstraints() {
         NSLayoutConstraint.activate([
             titleImage.topAnchor.constraint(equalTo: view.topAnchor), titleImage.leadingAnchor.constraint(equalTo: view.leadingAnchor), titleImage.widthAnchor.constraint(equalTo: view.widthAnchor), titleImage.trailingAnchor.constraint(equalTo: view.trailingAnchor), titleImage.heightAnchor.constraint(equalToConstant: 80)])
-    }
-    
-    
-    func initview(){
-        self.viewWidth = Double(view.frame.width)
-        self.initNavBar()
-        self.initTopBarView()
-        self.initRidePanel()
-        self.initTime()
-        self.initNext()
+        
+        NSLayoutConstraint.activate([
+            collectionView.topAnchor.constraint(equalTo: titleImage.bottomAnchor, constant: 70),
+            collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            collectionView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+            ])
     }
     
     func initNavBar(){
+        let viewWidth = Double(view.frame.width)
         let navHeight = 30.0
-        self.navBar = UIView.init(frame: CGRect.init(x: 20, y: 100, width: self.viewWidth, height: navHeight))
+        self.navBar = UIView.init(frame: CGRect.init(x: 20, y: 100, width: viewWidth, height: navHeight))
         self.view.addSubview(self.navBar)
         
         let backImage = UIImage.init(named: "Back")
@@ -76,200 +85,36 @@ class SearchRide2: UIViewController {
         self.navBar.addSubview(backButton)
     }
     
-    func initTopBarView(){
-        var image = UIImage.init(named: "bg")
-        let edge = UIEdgeInsets.init(top: 0, left: 127, bottom: 9, right: 121)
-        image = image?.resizableImage(withCapInsets: edge, resizingMode: UIImage.ResizingMode.stretch)
-        self.navigationController?.navigationBar.setBackgroundImage(image, for: UIBarMetrics.default)
-        self.navigationItem.hidesBackButton = true
-    }
-    
-    func initRidePanel(){
-        let panelHeight = 50.0
-        
-        self.ridePanel = UIView.init(frame: CGRect.init(x: 10, y: 140, width: self.viewWidth, height: panelHeight))
-        self.view.addSubview(self.ridePanel)
-        
-        let buttonWidth = (self.viewWidth - 50)/2.0
-        let buttonHeight = 40.0
-        
-        let leftButton = UIButton.init(frame: CGRect.init(x: 10, y: 10, width: buttonWidth, height: buttonHeight))
-        leftButton.tag = Int(RType.round.rawValue)
-        leftButton.backgroundColor = .white
-        leftButton.setTitle("Round Trip", for: .normal)
-        leftButton.setTitleColor(.lightGray, for: .normal)
-        leftButton.setTitleColor(.black, for: .selected)
-        leftButton.addTarget(self, action: #selector(selectRide(_:)), for: .touchUpInside)
-        leftButton.layer.cornerRadius = 4
-        self.ridePanel.addSubview(leftButton)
-        self.ridePanel.isUserInteractionEnabled = true
-        
-        let rightButton = UIButton.init(frame: CGRect.init(x: viewWidth - 35 - buttonWidth, y: 10, width: buttonWidth, height: buttonHeight))
-        rightButton.tag = Int(RType.single.rawValue)
-        rightButton.backgroundColor = .white
-        rightButton.setTitle("Single Trip", for: .normal)
-        rightButton.setTitleColor(.lightGray, for: .normal)
-        rightButton.setTitleColor(.black, for: .selected)
-        rightButton.addTarget(self, action: #selector(selectRide(_:)), for: .touchUpInside)
-        rightButton.layer.cornerRadius = 4
-        self.ridePanel.addSubview(rightButton)
-    }
-    
-    func initTime(){
-        self.timePanel = UIView.init(frame: CGRect.init(x: 10, y: 220, width: self.viewWidth - 20, height: 400))
-        self.view.addSubview(self.timePanel)
-        
-        let depatureLable = UILabel.init(frame: CGRect.init(x: 10, y: 10, width: 80, height: 52))
-        depatureLable.text = "Depature: "
-        depatureLable.textAlignment = .right
-        depatureLable.adjustsFontSizeToFitWidth = true
-        depatureLable.textColor = .white
-        depatureLable.layer.cornerRadius = 4
-        self.timePanel.addSubview(depatureLable)
-        
-        depatureTextField = UITextField.init(frame: CGRect.init(x: 100, y: 0, width: (self.viewWidth ) - 150, height: 52))
-        depatureTextField.backgroundColor = .white
-        depatureTextField.textColor = .black
-        depatureTextField.layer.cornerRadius = 4
-        self.timePanel.addSubview(depatureTextField)
-        
-        let depaDatePicker = UIDatePicker()
-        depaDatePicker.locale = NSLocale(localeIdentifier: "en_US") as Locale
-        depaDatePicker.datePickerMode = UIDatePicker.Mode.date
-        depaDatePicker.addTarget(self, action: #selector(depaDate), for: .valueChanged)
-        depaDatePicker.layer.backgroundColor = UIColor.white.cgColor
-        depaDatePicker.layer.masksToBounds = true
-        
-        depatureTextField.inputView = depaDatePicker
-        
-        let returnDateLable = UILabel.init(frame: CGRect.init(x: 10, y: 134, width: 80, height: 52))
-        returnDateLable.text = "Return: "
-        returnDateLable.textAlignment = .right
-        returnDateLable.adjustsFontSizeToFitWidth = true
-        returnDateLable.textColor = .white
-        returnDateLable.layer.cornerRadius = 4
-        self.timePanel.addSubview(returnDateLable)
-        
-        returnDateTextField = UITextField.init(frame: CGRect.init(x: 100, y: 134, width: (self.viewWidth ) - 150, height: 52))
-        returnDateTextField.backgroundColor = .white
-        returnDateTextField.textColor = .black
-        returnDateTextField.layer.cornerRadius = 4
-        self.timePanel.addSubview(returnDateTextField)
-        
-        let returnDatePicker = UIDatePicker()
-        returnDatePicker.locale = NSLocale(localeIdentifier: "en_US") as Locale
-        returnDatePicker.datePickerMode = UIDatePicker.Mode.date
-        returnDatePicker.addTarget(self, action: #selector(returnDate), for: .valueChanged)
-        returnDatePicker.layer.backgroundColor = UIColor.white.cgColor
-        returnDatePicker.layer.masksToBounds = true
-        
-        returnDateTextField.inputView = returnDatePicker
-        
-        let toolBar = UIToolbar().ToolbarPiker(mySelect: #selector(dismissPicker))
-        depatureTextField.inputAccessoryView = toolBar
-        returnDateTextField.inputAccessoryView = toolBar
-        
-        
-    }
-    
-    func initNext(){
-        self.nextPanel = UIView.init(frame: CGRect.init(x: 10, y: 600, width: self.viewWidth, height: 50))
-        self.view.addSubview(self.nextPanel)
-        
-        let nextButton = UIButton.init(frame: CGRect.init(x: (self.viewWidth - 300)/2, y: 0, width: 300, height: 52))
-        nextButton.backgroundColor = .white
-        nextButton.setTitle("Next", for: .normal)
-        nextButton.setTitleColor(.black, for: .normal)
-        nextButton.contentHorizontalAlignment = .center
-        nextButton.layer.cornerRadius = 26
-        nextButton.addTarget(self, action: #selector(nextPage), for: .touchUpInside)
-        self.nextPanel.addSubview(nextButton)
-        
-        
-    }
-    
-    
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-    }
-    
     @objc func back(){
         self.navigationController?.popViewController(animated: true)
     }
     
-    @objc func selectRide(_ sender: UIButton){
-        let array = self.ridePanel.subviews
-        for view in array{
-            if view is UIButton{
-                let button = view as! UIButton
-                button.isSelected = false
-            }
-        }
-        sender.isSelected = true
-        self.rideType = RType(rawValue: uint(sender.tag))
-        self.switchInputControl()
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: Cell2ReuseIdentifier, for: indexPath) as! SearchViewCell
+        let notess = searchArray[indexPath.item]
+        cell.configure(for: notess)
+        cell.setNeedsUpdateConstraints()
+        
+        return cell
     }
     
-    func switchInputControl(){
-        if self.rideType == RType.round{
-            self.returnDateTextField.isEnabled = true
-            self.returnDateTextField.backgroundColor = .white
-        }
-        else if self.rideType == RType.single{
-            self.returnDateTextField.isEnabled = false
-            self.returnDateTextField.backgroundColor = .lightGray
-        }
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return searchArray.count
     }
     
-    @objc func nextPage(){
-        let vc = PostRideViewController3()
-        navigationController?.pushViewController(vc, animated: true)
-        
+    // MARK: - UICollectionViewDelegate (all of these methods are optional)
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        // Run some code upon tapping a cell
+        // For example, if we wanted to remove the cell upon tap:
+        searchArray.remove(at: indexPath.item)
+        collectionView.reloadData()
     }
     
-    @objc func depaDate(depaDatepicker:UIDatePicker){
-        let format = DateFormatter()
-        let date = depaDatepicker.date
-        format.dateFormat = "MM-dd-YYYY"
-        let dateStr = format.string(from: date)
-        self.depatureTextField.text = dateStr
-        
+    // MARK: - UICollectionViewDelegateFlowLayout
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        // We want || padding IMAGE padding IMAGE padding IMAGE padding ||
+        let length = (collectionView.frame.width - padding * 4)
+        return CGSize(width: length, height: 100)
     }
-    
-    @objc func returnDate(returnDatepicker:UIDatePicker){
-        let format = DateFormatter()
-        let date = returnDatepicker.date
-        format.dateFormat = "MM-dd-YYYY"
-        let dateStr = format.string(from: date)
-        self.returnDateTextField.text = dateStr
-        
-    }
-    
-    @objc func dismissPicker() {
-        
-        view.endEditing(true)
-        
-    }
-}
-extension UIToolbar {
-    
-    func ToolbarPicker(mySelect : Selector) -> UIToolbar {
-        
-        let toolBar = UIToolbar()
-        
-        toolBar.barStyle = UIBarStyle.default
-        toolBar.isTranslucent = true
-        toolBar.tintColor = UIColor.black
-        toolBar.sizeToFit()
-        
-        let doneButton = UIBarButtonItem(title: "Done", style: UIBarButtonItem.Style.plain, target: self, action: mySelect)
-        let spaceButton = UIBarButtonItem(barButtonSystemItem: UIBarButtonItem.SystemItem.flexibleSpace, target: nil, action: nil)
-        
-        toolBar.setItems([ spaceButton, doneButton], animated: false)
-        toolBar.isUserInteractionEnabled = true
-        
-        return toolBar
-    }
-    
 }
 

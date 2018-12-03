@@ -1,5 +1,5 @@
 //
-//  SearchRide.swift
+//  SearchRide2.swift
 //  ZimRideMobile
 //
 //  Created by Nikita Lang on 11/24/18.
@@ -8,61 +8,64 @@
 
 import Foundation
 import UIKit
-import MapKit
 
-class SearchRide: UIViewController {
-    
-    var viewWidth:Double!
+enum RType:uint {
+    case round = 1, single = 2
+}
+
+class SearchRide2: UIViewController {
     var navBar:UIView!
-    var pathPanel:UIView!
-    var fromSubPanel:UIView!
-    var toSubPanel:UIView!
-    var fromTextfield:UITextField!
-    var toTextfield:UITextField!
-    var mainMapView:MKMapView!
+    var viewWidth:Double!
+    var ridePanel:UIView!
+    var timePanel:UIView!
     var nextPanel:UIView!
     
-    var fromField:String?
-    var toField:String?
+    var depatureTextField: UITextField!
+    var depatureTimeTextField: UITextField!
+    var returnDateTextField:UITextField!
+    var returnTimeTextField:UITextField!
     
-    var addressTableView:UITableView!
-    var addressList:NSMutableArray!
+    var rideType:RType!
     
-    var geocoder:CLGeocoder!
+    var titleImage: UIImageView!
     
-    var currentAddressType:Int!
-    
-    var fromPlacemark:CLPlacemark?
-    var toPlacemark:CLPlacemark?
-    
-    var fromAnnotation:MapAnnotation!
-    var toAnnotation:MapAnnotation!
-    
-    let fromTag = 110
-    let toTag = 111
+    let roundTag = 1
+    let singleTag = 2
     
     override func viewDidLoad() {
         super.viewDidLoad()
         self.view.backgroundColor = UIColor.init(red: 0.16, green: 0.49, blue: 0.68, alpha: 1.0)
         self.edgesForExtendedLayout = []
-        self.geocoder = CLGeocoder()
         self.initview()
         
+        // Do any additional setup after loading the view.
+        titleImage = UIImageView()
+        titleImage.image = UIImage(named: "Header")
+        titleImage.clipsToBounds = true
+        titleImage.contentMode = .scaleToFill
+        titleImage.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(titleImage)
+        setupConstraints()
     }
+    
+    func setupConstraints() {
+        NSLayoutConstraint.activate([
+            titleImage.topAnchor.constraint(equalTo: view.topAnchor), titleImage.leadingAnchor.constraint(equalTo: view.leadingAnchor), titleImage.widthAnchor.constraint(equalTo: view.widthAnchor), titleImage.trailingAnchor.constraint(equalTo: view.trailingAnchor), titleImage.heightAnchor.constraint(equalToConstant: 80)])
+    }
+    
     
     func initview(){
         self.viewWidth = Double(view.frame.width)
         self.initNavBar()
         self.initTopBarView()
-        self.intiPathPanel()
-        self.initMapView()
+        self.initRidePanel()
+        self.initTime()
         self.initNext()
-        self.initAdressTableView()
     }
     
     func initNavBar(){
         let navHeight = 30.0
-        self.navBar = UIView.init(frame: CGRect.init(x: 20, y: 20, width: self.viewWidth, height: navHeight))
+        self.navBar = UIView.init(frame: CGRect.init(x: 20, y: 100, width: self.viewWidth, height: navHeight))
         self.view.addSubview(self.navBar)
         
         let backImage = UIImage.init(named: "Back")
@@ -81,77 +84,91 @@ class SearchRide: UIViewController {
         self.navigationItem.hidesBackButton = true
     }
     
-    func intiPathPanel(){
-        let pathHeight = 150.0
+    func initRidePanel(){
+        let panelHeight = 50.0
         
-        self.pathPanel = UIView.init(frame: CGRect.init(x: 0, y: 80, width: self.viewWidth, height: pathHeight))
-        self.view.addSubview(self.pathPanel)
+        self.ridePanel = UIView.init(frame: CGRect.init(x: 10, y: 140, width: self.viewWidth, height: panelHeight))
+        self.view.addSubview(self.ridePanel)
         
+        let buttonWidth = (self.viewWidth - 50)/2.0
+        let buttonHeight = 40.0
         
-        self.fromSubPanel = UIView.init(frame: CGRect.init(x: 10, y: 10, width: self.viewWidth - 30, height: 52))
-        self.pathPanel.addSubview(self.fromSubPanel)
+        let leftButton = UIButton.init(frame: CGRect.init(x: 10, y: 10, width: buttonWidth, height: buttonHeight))
+        leftButton.tag = Int(RType.round.rawValue)
+        leftButton.backgroundColor = .white
+        leftButton.setTitle("Round Trip", for: .normal)
+        leftButton.setTitleColor(.lightGray, for: .normal)
+        leftButton.setTitleColor(.black, for: .selected)
+        leftButton.addTarget(self, action: #selector(selectRide(_:)), for: .touchUpInside)
+        leftButton.layer.cornerRadius = 4
+        self.ridePanel.addSubview(leftButton)
+        self.ridePanel.isUserInteractionEnabled = true
         
-        self.toSubPanel = UIView.init(frame: CGRect.init(x: 10, y: 78, width: self.viewWidth - 30, height: 52))
-        self.pathPanel.addSubview(self.toSubPanel)
-        
-        //from
-        let fromLabel = UILabel.init(frame: CGRect.init(x: 0, y: 0, width: 120, height: 52))
-        fromLabel.textColor = .white
-        fromLabel.text = "Starting From: "
-        fromLabel.textAlignment = .right
-        fromLabel.adjustsFontSizeToFitWidth = true
-        self.fromSubPanel.addSubview(fromLabel)
-        
-        let fromTextField = UITextField.init(frame: CGRect.init(x: 130, y: 0, width: self.viewWidth - 150, height: 52))
-        self.fromTextfield = fromTextField
-        fromTextField.tag = fromTag
-        fromTextField.backgroundColor = .white
-        fromTextField.layer.cornerRadius = 4
-        fromTextField.delegate = self
-        self.fromTextfield.addTarget(self, action: #selector(textFieldDidChange(_:)), for: UIControl.Event.editingChanged)
-        self.fromSubPanel.addSubview(fromTextField)
-        
-        //to
-        let toLabel = UILabel.init(frame: CGRect.init(x: 0, y: 0, width: 120, height: 52))
-        toLabel.textColor = .white
-        toLabel.text = "Going To: "
-        toLabel.textAlignment = .right
-        toLabel.adjustsFontSizeToFitWidth = true
-        self.toSubPanel.addSubview(toLabel)
-        
-        let toTextField = UITextField.init(frame: CGRect.init(x: 130, y: 0, width: self.viewWidth - 150, height: 52))
-        self.toTextfield = toTextField
-        toTextField.tag = toTag
-        toTextField.backgroundColor = .white
-        self.toTextfield.delegate = self
-        toTextField.layer.cornerRadius = 4
-        self.toTextfield.addTarget(self, action: #selector(textFieldDidChange(_:)), for: UIControl.Event.editingChanged)
-        self.toSubPanel.addSubview(toTextField)
-        
+        let rightButton = UIButton.init(frame: CGRect.init(x: viewWidth - 35 - buttonWidth, y: 10, width: buttonWidth, height: buttonHeight))
+        rightButton.tag = Int(RType.single.rawValue)
+        rightButton.backgroundColor = .white
+        rightButton.setTitle("Single Trip", for: .normal)
+        rightButton.setTitleColor(.lightGray, for: .normal)
+        rightButton.setTitleColor(.black, for: .selected)
+        rightButton.addTarget(self, action: #selector(selectRide(_:)), for: .touchUpInside)
+        rightButton.layer.cornerRadius = 4
+        self.ridePanel.addSubview(rightButton)
     }
     
-    func initAdressTableView(){
-        self.addressTableView = UITableView.init(frame: CGRect.zero)
-        self.addressTableView.isHidden = true
-        self.addressTableView.dataSource = self
-        self.addressTableView.delegate = self
-        self.addressTableView.register(AddressTableViewCell.self, forCellReuseIdentifier: "cell")
-        self.view.addSubview(self.addressTableView)
-        self.addressList = NSMutableArray.init(capacity: 0)
-    }
-    
-    func initMapView(){
-        self.mainMapView = MKMapView(frame: CGRect.init(x: 10, y: 240, width: self.viewWidth - 20, height: 250))
-        self.view.addSubview(self.mainMapView)
+    func initTime(){
+        self.timePanel = UIView.init(frame: CGRect.init(x: 10, y: 220, width: self.viewWidth - 20, height: 400))
+        self.view.addSubview(self.timePanel)
         
-        self.mainMapView.delegate = self
-        self.mainMapView.showsUserLocation = true
+        let depatureLable = UILabel.init(frame: CGRect.init(x: 10, y: 0, width: 80, height: 52))
+        depatureLable.text = "Depature: "
+        depatureLable.textAlignment = .right
+        depatureLable.adjustsFontSizeToFitWidth = true
+        depatureLable.textColor = .white
+        depatureLable.layer.cornerRadius = 4
+        self.timePanel.addSubview(depatureLable)
         
-        let latitudeDelta = self.mainMapView.region.span.latitudeDelta * 0.5
-        let longitudeDelta = self.mainMapView.region.span.longitudeDelta * 0.5
-        let span = MKCoordinateSpan.init(latitudeDelta: latitudeDelta, longitudeDelta: longitudeDelta)
-        let region = MKCoordinateRegion.init(center: self.mainMapView.centerCoordinate, span: span)
-        self.mainMapView .setRegion(region, animated: true)
+        depatureTextField = UITextField.init(frame: CGRect.init(x: 100, y: 0, width: (self.viewWidth ) - 150, height: 52))
+        depatureTextField.backgroundColor = .white
+        depatureTextField.textColor = .black
+        depatureTextField.layer.cornerRadius = 4
+        self.timePanel.addSubview(depatureTextField)
+        
+        let depaDatePicker = UIDatePicker()
+        depaDatePicker.locale = NSLocale(localeIdentifier: "en_US") as Locale
+        depaDatePicker.datePickerMode = UIDatePicker.Mode.date
+        depaDatePicker.addTarget(self, action: #selector(depaDate), for: .valueChanged)
+        depaDatePicker.layer.backgroundColor = UIColor.white.cgColor
+        depaDatePicker.layer.masksToBounds = true
+        
+        depatureTextField.inputView = depaDatePicker
+        
+        let returnDateLable = UILabel.init(frame: CGRect.init(x: 10, y: 72, width: 80, height: 52))
+        returnDateLable.text = "Return: "
+        returnDateLable.textAlignment = .right
+        returnDateLable.adjustsFontSizeToFitWidth = true
+        returnDateLable.textColor = .white
+        returnDateLable.layer.cornerRadius = 4
+        self.timePanel.addSubview(returnDateLable)
+        
+        returnDateTextField = UITextField.init(frame: CGRect.init(x: 100, y: 72, width: (self.viewWidth ) - 150, height: 52))
+        returnDateTextField.backgroundColor = .white
+        returnDateTextField.textColor = .black
+        returnDateTextField.layer.cornerRadius = 4
+        self.timePanel.addSubview(returnDateTextField)
+        
+        let returnDatePicker = UIDatePicker()
+        returnDatePicker.locale = NSLocale(localeIdentifier: "en_US") as Locale
+        returnDatePicker.datePickerMode = UIDatePicker.Mode.date
+        returnDatePicker.addTarget(self, action: #selector(returnDate), for: .valueChanged)
+        returnDatePicker.layer.backgroundColor = UIColor.white.cgColor
+        returnDatePicker.layer.masksToBounds = true
+        
+        returnDateTextField.inputView = returnDatePicker
+        
+        let toolBar = UIToolbar().ToolbarPiker(mySelect: #selector(dismissPicker))
+        depatureTextField.inputAccessoryView = toolBar
+        returnDateTextField.inputAccessoryView = toolBar
+        
         
     }
     
@@ -172,119 +189,87 @@ class SearchRide: UIViewController {
     }
     
     
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+    }
+    
     @objc func back(){
         self.navigationController?.popViewController(animated: true)
     }
     
+    @objc func selectRide(_ sender: UIButton){
+        let array = self.ridePanel.subviews
+        for view in array{
+            if view is UIButton{
+                let button = view as! UIButton
+                button.isSelected = false
+            }
+        }
+        sender.isSelected = true
+        self.rideType = RType(rawValue: uint(sender.tag))
+        self.switchInputControl()
+    }
+    
+    func switchInputControl(){
+        if self.rideType == RType.round{
+            self.returnDateTextField.isEnabled = true
+            self.returnDateTextField.backgroundColor = .white
+        }
+        else if self.rideType == RType.single{
+            self.returnDateTextField.isEnabled = false
+            self.returnDateTextField.backgroundColor = .lightGray
+        }
+    }
+    
     @objc func nextPage(){
-        let vc = PostRideViewController2()
+        let vc = SearchRide3()
         navigationController?.pushViewController(vc, animated: true)
         
     }
     
-    @objc func textFieldDidChange(_ textField: UITextField){
-        self.currentAddressType = textField.tag
-        if (textField.text?.count)! > 2 {
-            self.searchPlace(input: textField.text) { (placemarks)->Void in
-                if (placemarks != nil) {
-                    self.addressList.removeAllObjects()
-                    self.addressList.addObjects(from: placemarks!)
-                    var frame:CGRect
-                    var height:CGFloat
-                    var maxHeight:CGFloat
-                    if self.currentAddressType == self.fromTag {
-                        frame = self.fromSubPanel.convert(self.fromTextfield.frame, to: self.view)
-                    }else{
-                        frame = self.toSubPanel.convert(self.toTextfield.frame, to: self.view)
-                    }
-                    
-                    maxHeight = (self.view.frame.height - frame.maxY)
-                    height = CGFloat(self.addressList.count) * 51.0
-                    if height > maxHeight {
-                        height = maxHeight
-                    }
-                    
-                    self.addressTableView.frame = CGRect.init(x: frame.minX, y: frame.maxY, width: frame.width, height: height)
-                    self.addressTableView.isHidden = false
-                    self.addressTableView.reloadData()
-                }else{
-                    self.addressTableView.isHidden = true
-                }
-            }
-        }else{
-            self.addressTableView.isHidden = true
-        }
+    @objc func depaDate(depaDatepicker:UIDatePicker){
+        let format = DateFormatter()
+        let date = depaDatepicker.date
+        format.dateFormat = "MM-dd-YYYY"
+        let dateStr = format.string(from: date)
+        self.depatureTextField.text = dateStr
+        
     }
     
-    func searchPlace(input: String!,completionHandler:@escaping(([CLPlacemark]?)->Void)){
-        self.geocoder.geocodeAddressString(input) { (placemarks, error)->Void in
-            if error == nil && placemarks!.count > 0 {
-                completionHandler(placemarks)
-            }else{
-                completionHandler(nil)
-            }
-        }
+    @objc func returnDate(returnDatepicker:UIDatePicker){
+        let format = DateFormatter()
+        let date = returnDatepicker.date
+        format.dateFormat = "MM-dd-YYYY"
+        let dateStr = format.string(from: date)
+        self.returnDateTextField.text = dateStr
+        
     }
     
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if touches.count == 1 {
-            let touch = touches.first
-            if !(touch?.view is UITextField) && !(touch?.view is UITableView)  {
-                self.toTextfield.resignFirstResponder()
-                self.fromTextfield.resignFirstResponder()
-            }
-        }
+    @objc func dismissPicker() {
+        
+        view.endEditing(true)
+        
     }
-    
 }
-extension SearchRide:MKMapViewDelegate{
+extension UIToolbar {
+    
+    func ToolbarPicker(mySelect : Selector) -> UIToolbar {
+        
+        let toolBar = UIToolbar()
+        
+        toolBar.barStyle = UIBarStyle.default
+        toolBar.isTranslucent = true
+        toolBar.tintColor = UIColor.black
+        toolBar.sizeToFit()
+        
+        let doneButton = UIBarButtonItem(title: "Done", style: UIBarButtonItem.Style.plain, target: self, action: mySelect)
+        let spaceButton = UIBarButtonItem(barButtonSystemItem: UIBarButtonItem.SystemItem.flexibleSpace, target: nil, action: nil)
+        
+        toolBar.setItems([ spaceButton, doneButton], animated: false)
+        toolBar.isUserInteractionEnabled = true
+        
+        return toolBar
+    }
     
 }
 
-extension SearchRide:UITextFieldDelegate{
-    func textFieldDidEndEditing(_ textField: UITextField) {
-        self.addressTableView.isHidden = true
-    }
-}
-
-extension SearchRide:UITableViewDelegate, UITableViewDataSource{
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return self.addressList.count
-    }
-    
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath) as! AddressTableViewCell
-        let placemark = self.addressList[indexPath.row] as! CLPlacemark
-        cell.titleLabel?.text = placemark.name
-        cell.subTitleLabel?.text = placemark.locality
-        return cell
-    }
-    
-    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        return 50.0
-    }
-    
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        if  self.currentAddressType == self.fromTag{
-            self.fromPlacemark = self.addressList?[indexPath.row] as? CLPlacemark
-            self.fromField = self.fromPlacemark?.name
-            self.fromTextfield.resignFirstResponder()
-            self.fromTextfield.text = self.fromField
-            if  self.fromAnnotation != nil {
-                self.mainMapView.removeAnnotation(self.fromAnnotation)
-            }
-            self.fromAnnotation = MapAnnotation.init(coordinate: (self.fromPlacemark?.location?.coordinate)!, title: "origin", subtitle: (self.fromPlacemark?.name)!)
-            self.mainMapView.addAnnotation(self.fromAnnotation)
-        }else{
-            self.toPlacemark = self.addressList?[indexPath.row] as? CLPlacemark
-            self.toField = self.toPlacemark?.name
-            self.toTextfield.resignFirstResponder()
-            self.toTextfield.text = self.toField
-            if self.toAnnotation != nil {
-                self.mainMapView.removeAnnotation(self.toAnnotation)
-            }
-            self.toAnnotation = MapAnnotation.init(coordinate: (self.toPlacemark?.location?.coordinate)!, title: "destination", subtitle: (self.toPlacemark?.name)!)
-            self.mainMapView.addAnnotation(self.toAnnotation)
-        }
-    }
-}

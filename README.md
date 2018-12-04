@@ -1,5 +1,6 @@
 # ZimRideMobile
 A Rideshare app for Cornell Students\
+Use Iphone 8 plus
 Screenshots:
 
 To connect drivers and passengers going places
